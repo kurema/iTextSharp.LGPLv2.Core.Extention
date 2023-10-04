@@ -13,36 +13,55 @@ namespace iTextSharp.text.pdf;
 
 public class PdfReaderTriable : pdf.PdfReader
 {
-	public PdfReaderTriable(string filename) : base(filename)
+	Type thisType;
+
+	public PdfReaderTriable(string filename) : this(filename, null)
 	{
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(byte[] pdfIn) : base(pdfIn)
+	public PdfReaderTriable(byte[] pdfIn) : this(pdfIn, null)
 	{
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(Uri url) : base(url)
+	public PdfReaderTriable(Uri url) : this(url, null)
 	{
+		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(PdfReader reader) : base(reader)
 	{
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(string filename, byte[] ownerPassword) : base(filename, ownerPassword)
+	public PdfReaderTriable(string filename, byte[] ownerPassword)
 	{
+		Password = ownerPassword;
+		Tokens = new PrTokeniser(filename);
+		ReadPdf();
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(byte[] pdfIn, byte[] ownerPassword) : base(pdfIn, ownerPassword)
+	public PdfReaderTriable(byte[] pdfIn, byte[] ownerPassword)
 	{
+		Password = ownerPassword;
+		Tokens = new PrTokeniser(pdfIn);
+		ReadPdf();
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(Uri url, byte[] ownerPassword) : base(url, ownerPassword)
+	public PdfReaderTriable(Uri url, byte[] ownerPassword)
 	{
+		Password = ownerPassword;
+		Tokens = new PrTokeniser(new RandomAccessFileOrArray(url));
+		ReadPdf();
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(Stream isp, bool forceRead = true) : base(isp, forceRead)
+	public PdfReaderTriable(Stream isp, bool forceRead = true) : this(isp, null, forceRead)
 	{
+		thisType = this.GetType();
 	}
 
 	//You cant't use this because ReadPdfPartial(); is used and it's not virtual.
@@ -50,20 +69,34 @@ public class PdfReaderTriable : pdf.PdfReader
 	//{
 	//}
 
-	public PdfReaderTriable(string filename, X509Certificate certificate, ICipherParameters certificateKey) : base(filename, certificate, certificateKey)
+	public PdfReaderTriable(string filename, X509Certificate certificate, ICipherParameters certificateKey)
 	{
+		Certificate = certificate;
+		CertificateKey = certificateKey;
+		Tokens = new PrTokeniser(filename);
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(Stream isp, byte[] ownerPassword, bool forceRead = true) : base(isp, ownerPassword, forceRead)
+	public PdfReaderTriable(Stream isp, byte[] ownerPassword, bool forceRead = true)
 	{
+		Password = ownerPassword;
+		Tokens = new PrTokeniser(new RandomAccessFileOrArray(isp, forceRead));
+		ReadPdf();
+		thisType = this.GetType();
 	}
 
-	public PdfReaderTriable(Stream isp, X509Certificate certificate, ICipherParameters certificateKey) : base(isp, certificate, certificateKey)
+	public PdfReaderTriable(Stream isp, X509Certificate certificate, ICipherParameters certificateKey)
 	{
+		Certificate = certificate;
+		CertificateKey = certificateKey;
+		Tokens = new PrTokeniser(new RandomAccessFileOrArray(isp));
+		ReadPdf();
+		thisType = this.GetType();
 	}
 
 	protected internal PdfReaderTriable()
 	{
+		thisType = this.GetType();
 	}
 
 	int? _FileLength;
@@ -73,7 +106,6 @@ public class PdfReaderTriable : pdf.PdfReader
 	{
 		base.ReadPdf();
 
-		var thisType = this.GetType();
 		try
 		{
 			_FileLength = Tokens.File.Length;
@@ -106,11 +138,15 @@ public class PdfReaderTriable : pdf.PdfReader
 				var _bBailout = (bool)thisType.GetField("_bBailout").GetValue(this);
 				if (_bBailout == false)
 				{
-					ReadDocObj();
+					ReadDocObjTriable();
 				}
 			}
 			catch (Exception ne)
 			{
+				if (ne is BadPasswordExceptionTriable)
+				{
+					throw;
+				}
 				if (ne is BadPasswordException)
 				{
 					throw new BadPasswordException(ne.Message);
@@ -127,7 +163,7 @@ public class PdfReaderTriable : pdf.PdfReader
 				Encrypted = false;
 				RebuildXref();
 				lastXref = -1;
-				ReadDocObj();
+				ReadDocObjTriable();
 			}
 
 			Strings.Clear();
@@ -148,7 +184,7 @@ public class PdfReaderTriable : pdf.PdfReader
 		}
 	}
 
-	protected internal void ReadDocObj()
+	protected internal void ReadDocObjTriable()
 	{
 		List<PrStream> streams = new();
 		var _xrefObj = new List<PdfObject>(Xref.Length / 2);
@@ -238,7 +274,9 @@ public class PdfReaderTriable : pdf.PdfReader
 			return;
 		}
 
-		var _encryptionError = true;
+		//_encryptionError = true;
+		thisType.GetField("_encryptionError").SetValue(this, true);
+
 		byte[] encryptionKey = null;
 
 		Encrypted = true;
@@ -465,24 +503,24 @@ public class PdfReaderTriable : pdf.PdfReader
 			}
 
 #if NET462
-            using (var sh = new SHA1CryptoServiceProvider())
-            {
-                sh.TransformBlock(envelopedData, 0, 20, envelopedData, 0);
-                for (var i = 0; i < recipients.Size; i++)
-                {
-                    var encodedRecipient = recipients[i].GetBytes();
-                    sh.TransformBlock(encodedRecipient, 0, encodedRecipient.Length, encodedRecipient, 0);
-                }
+			using (var sh = new SHA1CryptoServiceProvider())
+			{
+				sh.TransformBlock(envelopedData, 0, 20, envelopedData, 0);
+				for (var i = 0; i < recipients.Size; i++)
+				{
+					var encodedRecipient = recipients[i].GetBytes();
+					sh.TransformBlock(encodedRecipient, 0, encodedRecipient.Length, encodedRecipient, 0);
+				}
 
-                if ((cryptoMode & PdfWriter.DO_NOT_ENCRYPT_METADATA) != 0)
-                {
-                    sh.TransformBlock(PdfEncryption.MetadataPad, 0, PdfEncryption.MetadataPad.Length,
-                                      PdfEncryption.MetadataPad, 0);
-                }
+				if ((cryptoMode & PdfWriter.DO_NOT_ENCRYPT_METADATA) != 0)
+				{
+					sh.TransformBlock(PdfEncryptionInternal.MetadataPad, 0, PdfEncryptionInternal.MetadataPad.Length,
+									  PdfEncryptionInternal.MetadataPad, 0);
+				}
 
-                sh.TransformFinalBlock(envelopedData, 0, 0);
-                encryptionKey = sh.Hash;
-            }
+				sh.TransformFinalBlock(envelopedData, 0, 0);
+				encryptionKey = sh.Hash;
+			}
 #else
 			using (var sh = IncrementalHash.CreateHash(HashAlgorithmName.SHA1))
 			{
@@ -495,7 +533,7 @@ public class PdfReaderTriable : pdf.PdfReader
 
 				if ((cryptoMode & PdfWriter.DO_NOT_ENCRYPT_METADATA) != 0)
 				{
-					sh.AppendData(PdfEncryption.MetadataPad, 0, PdfEncryption.MetadataPad.Length);
+					sh.AppendData(PdfEncryptionInternal.MetadataPad, 0, PdfEncryptionInternal.MetadataPad.Length);
 				}
 
 				encryptionKey = sh.GetHashAndReset();
@@ -504,7 +542,8 @@ public class PdfReaderTriable : pdf.PdfReader
 		}
 
 		bool _ownerPasswordUsed = false;
-		decrypt = new PdfEncryption();
+		var decrypt = new PdfEncryptionInternal();
+		this.decrypt = decrypt;
 		decrypt.SetCryptoMode(cryptoMode, lengthValue);
 
 		if (filter.Equals(PdfName.Standard))
@@ -519,7 +558,18 @@ public class PdfReaderTriable : pdf.PdfReader
 					decrypt.SetupByUserPassword(documentId, Password, oValue, PValue);
 					if (!equalsArray(uValue, decrypt.UserKey, RValue == 3 || RValue == 4 ? 16 : 32))
 					{
-						throw new BadPasswordException("Bad user password");
+						int pValue = PValue;
+						int rValue = RValue;
+						throw new BadPasswordExceptionTriable("Bad user password", p =>
+						{
+							var decrypt = new PdfEncryptionInternal();
+							decrypt.SetCryptoMode(cryptoMode, lengthValue);
+							decrypt.SetupByOwnerPassword(documentId, p, uValue, oValue, pValue);
+							if (equalsArray(uValue, decrypt.UserKey, rValue == 3 || rValue == 4 ? 16 : 32)) return BadPasswordExceptionTriable.TryPasswordResult.SuccessOwnerPassword;
+							decrypt.SetupByUserPassword(documentId, p, oValue, pValue);
+							if (equalsArray(uValue, decrypt.UserKey, rValue == 3 || rValue == 4 ? 16 : 32)) return BadPasswordExceptionTriable.TryPasswordResult.SuccessUserPassword;
+							return BadPasswordExceptionTriable.TryPasswordResult.Fail;
+						});
 					}
 				}
 				else
@@ -575,11 +625,43 @@ public class PdfReaderTriable : pdf.PdfReader
 
 				if (!_ownerPasswordUsed)
 				{
+					int pValue = this.PValue;
+					Func<byte[], BadPasswordExceptionTriable.TryPasswordResult> passwordTester = p =>
+					{
+						var decrypt = new PdfEncryption();
+						decrypt.SetCryptoMode(cryptoMode, lengthValue);
+						var password = p;
+						if (password == null)
+						{
+							password = Array.Empty<byte>();
+						}
+						else if (password.Length > 127)
+						{
+							password = password.CopyOf(127);
+						}
+						var hashAlg2B = PdfEncryption.HashAlg2B(password, oValue.CopyOfRange(32, 40), uValue);
+						if (equalsArray(hashAlg2B, oValue, 32))
+						{
+							// step d of Algorithm 2.A
+							decrypt.SetupByOwnerPassword(documentId, password, uValue, ueValue, oValue, oeValue, pValue);
+							// step f of Algorithm 2.A
+							if (decrypt.DecryptAndCheckPerms(permsValue))
+							{
+								return BadPasswordExceptionTriable.TryPasswordResult.SuccessOwnerPassword;
+							}
+						}
+						hashAlg2B = PdfEncryption.HashAlg2B(password, uValue.CopyOfRange(32, 40), null);
+						if (!equalsArray(hashAlg2B, uValue, 32)) return BadPasswordExceptionTriable.TryPasswordResult.Fail;
+						decrypt.SetupByUserPassword(documentId, password, uValue, ueValue, oValue, oeValue, pValue);
+						if (!decrypt.DecryptAndCheckPerms(permsValue)) return BadPasswordExceptionTriable.TryPasswordResult.Fail;
+						return BadPasswordExceptionTriable.TryPasswordResult.SuccessUserPassword;
+					};
+
 					// analog of step c of Algorithm 2.A for user password
 					hashAlg2B = PdfEncryption.HashAlg2B(password, uValue.CopyOfRange(32, 40), null);
 					if (!equalsArray(hashAlg2B, uValue, 32))
 					{
-						throw new BadPasswordException("Bad user password");
+						throw new BadPasswordExceptionTriable("Bad user password", passwordTester);
 					}
 
 					// step e of Algorithm 2.A
@@ -587,7 +669,7 @@ public class PdfReaderTriable : pdf.PdfReader
 					// step f of Algorithm 2.A
 					if (!decrypt.DecryptAndCheckPerms(permsValue))
 					{
-						throw new BadPasswordException("Bad user password");
+						throw new BadPasswordExceptionTriable("Bad user password", passwordTester);
 					}
 				}
 
@@ -600,19 +682,24 @@ public class PdfReaderTriable : pdf.PdfReader
 			_ownerPasswordUsed = true;
 		}
 
-		//for (var k = 0; k < Strings.Count; ++k)
-		//{
-		//	var str = Strings[k];
-		//	str.Decrypt(this);
-		//}
+		for (var k = 0; k < Strings.Count; ++k)
+		{
+			var str = Strings[k];
+			typeof(PdfString).GetMethod("Decrypt")?.Invoke(str, new[] { this });
+			//str.Decrypt(this);
+		}
 
-		//if (encDic.IsIndirect())
-		//{
-		//	_cryptoRef = (PrIndirectReference)encDic;
-		//	_xrefObj[_cryptoRef.Number] = null;
-		//}
+		if (encDic.IsIndirect())
+		{
+			thisType.GetField("_cryptoRef").SetValue(this, (PrIndirectReference)encDic);
+			//_cryptoRef = (PrIndirectReference)encDic;
+			var _cryptoRef = (PrIndirectReference)encDic;
+			var _xrefObj = (List<PdfObject>)thisType.GetField("_xrefObj").GetValue(this);
+			_xrefObj[_cryptoRef.Number] = null;
+		}
 
 		//_encryptionError = false;
+		thisType.GetField("_encryptionError").SetValue(this, false);
 	}
 
 	private static bool equalsArray(byte[] ar1, byte[] ar2, int size)

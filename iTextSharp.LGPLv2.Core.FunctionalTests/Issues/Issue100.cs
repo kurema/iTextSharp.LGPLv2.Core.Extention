@@ -215,7 +215,7 @@ public class Issue100
     }
 
     [TestMethod]
-    [ExpectedException(typeof(BadPasswordException))]
+    [ExpectedException(typeof(BadPasswordExceptionTriable))]
     public void Test_Issue100_ReadNonTrivialCryptFilter()
     {
         // in this test file only the embedded file is encrypted.
@@ -247,7 +247,7 @@ public class Issue100
     }
 
     [TestMethod]
-    [ExpectedException(typeof(BadPasswordException))]
+    [ExpectedException(typeof(BadPasswordExceptionTriable))]
     public void Test_Issue100_ReadUnfilterableWithCrypt()
     {
         // this test file only certain streams with Crypt filters are encrypted.

@@ -5,6 +5,7 @@ using Org.BouncyCastle.X509;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.util;
@@ -13,55 +14,58 @@ namespace iTextSharp.text.pdf;
 
 public class PdfReaderTriable : pdf.PdfReader
 {
-	Type thisType;
+	//Type thisType;
+	Type baseType;
+
+	public void InitTypes()
+	{
+		//thisType = this.GetType();
+		baseType = this.GetType().BaseType;
+	}
 
 	public PdfReaderTriable(string filename) : this(filename, null)
 	{
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(byte[] pdfIn) : this(pdfIn, null)
 	{
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(Uri url) : this(url, null)
 	{
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(PdfReader reader) : base(reader)
 	{
-		thisType = this.GetType();
+		InitTypes();
 	}
 
 	public PdfReaderTriable(string filename, byte[] ownerPassword)
 	{
+		InitTypes();
 		Password = ownerPassword;
 		Tokens = new PrTokeniser(filename);
 		ReadPdf();
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(byte[] pdfIn, byte[] ownerPassword)
 	{
+		InitTypes();
 		Password = ownerPassword;
 		Tokens = new PrTokeniser(pdfIn);
 		ReadPdf();
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(Uri url, byte[] ownerPassword)
 	{
+		InitTypes();
 		Password = ownerPassword;
 		Tokens = new PrTokeniser(new RandomAccessFileOrArray(url));
 		ReadPdf();
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(Stream isp, bool forceRead = true) : this(isp, null, forceRead)
 	{
-		thisType = this.GetType();
 	}
 
 	//You cant't use this because ReadPdfPartial(); is used and it's not virtual.
@@ -71,49 +75,45 @@ public class PdfReaderTriable : pdf.PdfReader
 
 	public PdfReaderTriable(string filename, X509Certificate certificate, ICipherParameters certificateKey)
 	{
+		InitTypes();
 		Certificate = certificate;
 		CertificateKey = certificateKey;
 		Tokens = new PrTokeniser(filename);
-		thisType = this.GetType();
+		ReadPdf();
 	}
 
 	public PdfReaderTriable(Stream isp, byte[] ownerPassword, bool forceRead = true)
 	{
+		InitTypes();
 		Password = ownerPassword;
 		Tokens = new PrTokeniser(new RandomAccessFileOrArray(isp, forceRead));
 		ReadPdf();
-		thisType = this.GetType();
 	}
 
 	public PdfReaderTriable(Stream isp, X509Certificate certificate, ICipherParameters certificateKey)
 	{
+		InitTypes();
 		Certificate = certificate;
 		CertificateKey = certificateKey;
 		Tokens = new PrTokeniser(new RandomAccessFileOrArray(isp));
 		ReadPdf();
-		thisType = this.GetType();
 	}
 
 	protected internal PdfReaderTriable()
 	{
-		thisType = this.GetType();
+		InitTypes();
 	}
 
-	int? _FileLength;
-	public new int FileLength { get => _FileLength ?? base.FileLength; private set { _FileLength = value; } }
 
 	protected override void ReadPdf()
 	{
-		base.ReadPdf();
-
 		try
 		{
-			_FileLength = Tokens.File.Length;
-			thisType.GetProperty(nameof(FileLength), System.Reflection.BindingFlags.Public).SetValue(thisType, Tokens.File.Length);
+			baseType.GetProperty(nameof(FileLength)).SetValue(this, Tokens.File.Length);
 			pdfVersion = Tokens.CheckPdfHeader();
 			try
 			{
-				var _bBailout = (bool)thisType.GetField("_bBailout").GetValue(this);
+				var _bBailout = (bool)baseType.GetField("_bBailout", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
 				if (_bBailout == false)
 				{
 					ReadXref();
@@ -135,7 +135,7 @@ public class PdfReaderTriable : pdf.PdfReader
 
 			try
 			{
-				var _bBailout = (bool)thisType.GetField("_bBailout").GetValue(this);
+				var _bBailout = (bool)baseType.GetField("_bBailout", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
 				if (_bBailout == false)
 				{
 					ReadDocObjTriable();
@@ -152,7 +152,7 @@ public class PdfReaderTriable : pdf.PdfReader
 					throw new BadPasswordException(ne.Message);
 				}
 
-				var _encryptionError = (bool)thisType.GetField("_encryptionError").GetValue(this);
+				var _encryptionError = (bool)baseType.GetField("_encryptionError", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
 				if (Rebuilt || _encryptionError)
 					if (Rebuilt)
 					{
@@ -188,6 +188,7 @@ public class PdfReaderTriable : pdf.PdfReader
 	{
 		List<PrStream> streams = new();
 		var _xrefObj = new List<PdfObject>(Xref.Length / 2);
+		baseType.GetField("_xrefObj", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, _xrefObj);
 		for (var k = 0; k < Xref.Length / 2; ++k)
 		{
 			_xrefObj.Add(null);
@@ -241,7 +242,7 @@ public class PdfReaderTriable : pdf.PdfReader
 
 		for (var k = 0; k < streams.Count; ++k)
 		{
-			//checkPrStreamLength(streams[k]);
+			baseType.GetMethod("checkPrStreamLength", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(this, new[] { streams[k] });
 		}
 
 		readDecryptedDocObj();
@@ -275,7 +276,7 @@ public class PdfReaderTriable : pdf.PdfReader
 		}
 
 		//_encryptionError = true;
-		thisType.GetField("_encryptionError").SetValue(this, true);
+		baseType.GetField("_encryptionError", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, true);
 
 		byte[] encryptionKey = null;
 
@@ -685,21 +686,22 @@ public class PdfReaderTriable : pdf.PdfReader
 		for (var k = 0; k < Strings.Count; ++k)
 		{
 			var str = Strings[k];
-			typeof(PdfString).GetMethod("Decrypt")?.Invoke(str, new[] { this });
+			typeof(PdfString).GetMethod("Decrypt", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(str, new[] { this });
 			//str.Decrypt(this);
 		}
 
 		if (encDic.IsIndirect())
 		{
-			thisType.GetField("_cryptoRef").SetValue(this, (PrIndirectReference)encDic);
+			baseType.GetField("_cryptoRef", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, (PrIndirectReference)encDic);
 			//_cryptoRef = (PrIndirectReference)encDic;
 			var _cryptoRef = (PrIndirectReference)encDic;
-			var _xrefObj = (List<PdfObject>)thisType.GetField("_xrefObj").GetValue(this);
+			var _xrefObj = (List<PdfObject>)baseType.GetField("_xrefObj", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
 			_xrefObj[_cryptoRef.Number] = null;
 		}
 
 		//_encryptionError = false;
-		thisType.GetField("_encryptionError").SetValue(this, false);
+		baseType.GetField("_ownerPasswordUsed", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, _ownerPasswordUsed);
+		baseType.GetField("_encryptionError", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, false);
 	}
 
 	private static bool equalsArray(byte[] ar1, byte[] ar2, int size)

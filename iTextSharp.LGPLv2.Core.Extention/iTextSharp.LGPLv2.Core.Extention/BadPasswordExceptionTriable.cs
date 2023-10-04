@@ -30,5 +30,5 @@ public class BadPasswordExceptionTriable : BadPasswordException
 		SuccessOwnerPassword, SuccessUserPassword, Fail,
 	}
 
-	public bool IsSucess(TryPasswordResult arg) => arg switch { TryPasswordResult.SuccessOwnerPassword or TryPasswordResult.SuccessUserPassword => true, _ => false };
+	public static bool IsSucess(TryPasswordResult? arg) => arg switch { TryPasswordResult.SuccessOwnerPassword or TryPasswordResult.SuccessUserPassword => true, _ => false };
 }

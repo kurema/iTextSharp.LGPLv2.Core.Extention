@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace iTextSharp.text.pdf
@@ -18,8 +19,8 @@ namespace iTextSharp.text.pdf
 			thisType = typeof(PdfEncryptionInternal);
 		}
 
-		internal byte[] UserKey => (byte[])thisType.GetField("UserKey").GetValue(this);
-		internal int Permissions => (int)thisType.GetField("Permissions").GetValue(this);
+		internal byte[] UserKey => (byte[])thisType.GetField("UserKey", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
+		internal int Permissions => (int)thisType.GetField("Permissions", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(this);
 		public static readonly byte[] MetadataPad = { 255, 255, 255, 255 };
 	}
 }

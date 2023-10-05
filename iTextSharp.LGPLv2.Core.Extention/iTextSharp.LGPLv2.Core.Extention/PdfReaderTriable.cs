@@ -686,7 +686,7 @@ public class PdfReaderTriable : pdf.PdfReader
 		for (var k = 0; k < Strings.Count; ++k)
 		{
 			var str = Strings[k];
-			typeof(PdfString).GetMethod("Decrypt", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(str, new[] { this });
+			typeof(PdfString).GetMethod("Decrypt", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(str, new[] { this });
 			//str.Decrypt(this);
 		}
 

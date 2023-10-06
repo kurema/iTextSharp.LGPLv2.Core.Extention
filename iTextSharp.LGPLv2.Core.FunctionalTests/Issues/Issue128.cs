@@ -29,9 +29,10 @@ public class Issue128
 			Assert.AreEqual(pe.TryPassword(Encoding.UTF8.GetBytes("password")), BadPasswordExceptionTriable.TryPasswordResult.SuccessUserPassword);
 			Assert.AreEqual(pe.TryPassword(Encoding.UTF8.GetBytes("owner")), BadPasswordExceptionTriable.TryPasswordResult.SuccessOwnerPassword);
 		}
-		catch(Exception e)
-		{
 
+		{
+			using var reader = new PdfReaderTriable(inputFile, Encoding.UTF8.GetBytes("password"));
+			Assert.AreEqual(reader.NumberOfPages, 2);
 		}
 	}
 }

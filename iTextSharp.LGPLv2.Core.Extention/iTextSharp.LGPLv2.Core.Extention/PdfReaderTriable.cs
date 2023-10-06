@@ -210,6 +210,7 @@ public class PdfReaderTriable : pdf.PdfReader
 			}
 
 			var _objNum = Tokens.IntValue;
+			baseType.GetField("_objNum", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, _objNum);
 			Tokens.NextValidToken();
 			if (Tokens.TokenType != PrTokeniser.TK_NUMBER)
 			{
@@ -217,6 +218,7 @@ public class PdfReaderTriable : pdf.PdfReader
 			}
 
 			var _objGen = Tokens.IntValue;
+			baseType.GetField("_objGen", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(this, _objGen);
 			Tokens.NextValidToken();
 			if (!Tokens.StringValue.Equals("obj", StringComparison.Ordinal))
 			{
